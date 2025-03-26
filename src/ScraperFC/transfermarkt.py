@@ -231,7 +231,14 @@ class Transfermarkt():
         # Name
         name_tag = soup.find("h1", {"class": "data-header__headline-wrapper"})
         name = name_tag.text.split("\n")[-1].strip()  # type: ignore
-        
+
+        # Shirt number
+        try:
+            shirt_number = int(name_tag.text.split("\n")[2].strip().replace("#",""))
+            shirt_number = int(shirt_number)
+        except AttributeError:
+            shirt_number = None
+
         # Value
         try:
             value_tag = soup.find("a", {"class": "data-header__market-value-wrapper"})
@@ -353,6 +360,7 @@ class Transfermarkt():
         
         player = pd.Series(dtype=object)
         player["Name"] = name
+        player["Shirt number"] = shirt_number
         player["ID"] = player_link.split("/")[-1]
         player["Value"] = value
         player["Value last updated"] = value_last_updated
