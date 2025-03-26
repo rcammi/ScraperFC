@@ -36,6 +36,15 @@ comps = {
     "Primavera 2 - A": "https://www.transfermarkt.us/primavera-2a/startseite/wettbewerb/IJ2A",
     "Primavera 2 - B": "https://www.transfermarkt.us/primavera-2b/startseite/wettbewerb/IJ2B",
     "Campionato U18": "https://www.transfermarkt.us/campionato-nazionale-under-18/startseite/wettbewerb/ITJ7",  # noqa: E501
+    "Argentina Torneo Apertura": "https://www.transfermarkt.us/torneo-apertura/startseite/wettbewerb/ARG1", 
+    "Colombia Liga Apertura": "https://www.transfermarkt.us/liga-dimayor-apertura/startseite/wettbewerb/COLP",
+    "Chile Liga de Primera": "https://www.transfermarkt.us/liga-de-primera/startseite/wettbewerb/CLPD",
+    "Ecuador Liga Pro Serie A": "https://www.transfermarkt.us/ligapro-serie-a/startseite/wettbewerb/EC1N",
+    "Uruguay Liga Apertura": "https://www.transfermarkt.us/liga-auf-apertura/startseite/wettbewerb/URU1",
+    "Peru Liga 1 Apertura": "https://www.transfermarkt.us/liga-1-apertura/startseite/wettbewerb/TDeA",
+    "Paraguay Primera Divison Apertura": "https://www.transfermarkt.us/primera-division-apertura/startseite/wettbewerb/PR1A",
+    "Bolivia Division Profesional Apertura": "https://www.transfermarkt.us/division-profesional-apertura/startseite/wettbewerb/B1AP",
+    "Venezuela Liga Apertura": "https://www.transfermarkt.us/liga-futve-apertura/startseite/wettbewerb/VZ1A"
 }
 
 
