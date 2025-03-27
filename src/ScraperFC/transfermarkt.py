@@ -221,164 +221,147 @@ class Transfermarkt():
         : DataFrame
             1-row dataframe with all of the player details
         """
-        r = requests.get(
-            player_link,
-            headers={
-                "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +\
-                    "(KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36"
-            }
-        )
-        soup = BeautifulSoup(r.content, "html.parser")
+        headers = {
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 " +
+                        "(KHTML, like Gecko) Chrome/55.0.2883.87 Safari/537.36"
+        }
+        
+        try:
+            r = requests.get(player_link, headers=headers)
+            r.raise_for_status()  # Raise an error for bad responses (4xx, 5xx)
+            soup = BeautifulSoup(r.content, "html.parser")
+        except requests.RequestException as e:
+            print(f"Error fetching page: {e}")
+            return pd.DataFrame()  # Return empty DataFrame on request failure
         
         # Name
-        name_tag = soup.find("h1", {"class": "data-header__headline-wrapper"})
-        name = name_tag.text.split("\n")[-1].strip()  # type: ignore
+        name = None
+        name_tag = soup.find("h1", class_="data-header__headline-wrapper")
+        if name_tag:
+            name = name_tag.text.strip().split("\n")[-1]
 
         # Shirt number
         try:
-            shirt_number = int(name_tag.text.split("\n")[2].strip().replace("#",""))
-            shirt_number = int(shirt_number)
-        except AttributeError:
+            shirt_number_tag = soup.find("span", class_="data-header__shirt-number")
+            shirt_number = int(shirt_number_tag.text.strip().replace("#", "")) if shirt_number_tag else None
+        except ValueError:
             shirt_number = None
 
         # Value
         try:
-            value_tag = soup.find("a", {"class": "data-header__market-value-wrapper"})
-            value = value_tag.text.split(" ")[0]  # type: ignore
-            value_last_updated_tag = soup.find("a", {"class": "data-header__market-value-wrapper"})
-            value_last_updated = value_last_updated_tag.text.split("Last update: ")[-1]  # type: ignore
+            value_tag = soup.find("a", class_="data-header__market-value-wrapper")
+            value = value_tag.text.split(" ")[0] if value_tag else None
+            value_last_updated_tag = soup.find("a", class_="data-header__market-value-wrapper")
+            value_last_updated = value_last_updated_tag.text.split("Last update: ")[-1] if value_last_updated_tag else None
         except AttributeError:
-            value = None
-            value_last_updated = None
-            
+            value, value_last_updated = None, None
+
         # DOB and age
-        dob_el = soup.find("span", {"itemprop": "birthDate"})
-        if dob_el is None:
+        dob_el = soup.find("span", itemprop="birthDate")
+        if dob_el:
+            dob_parts = dob_el.text.strip().split(" ")
+            dob = " ".join(dob_parts[:3]) if len(dob_parts) >= 3 else None
+            age = int(dob_parts[-1].replace("(", "").replace(")", "")) if dob_parts[-1].isdigit() else None
+        else:
             dob, age = None, None
-        else:
-            dob = " ".join(dob_el.text.strip().split(" ")[:3])
-            age = int(dob_el.text.strip().split(" ")[-1].replace("(", "").replace(")", ""))
-        
+
         # Height
-        height_tag = soup.find("span", {"itemprop": "height"})
-        if height_tag is None:
-            height = None
-        else:
+        height_tag = soup.find("span", itemprop="height")
+        if height_tag:
             height_str = height_tag.text.strip()
-            if height_str in ["N/A", "- m"]:
-                height = None
-            else:
-                height = float(height_str.replace(" m", "").replace(",", "."))
+            height = float(height_str.replace(" m", "").replace(",", ".")) if height_str not in ["N/A", "- m"] else None
+        else:
+            height = None
 
         # Nationality and citizenships
-        nationality_el = soup.find("span", {"itemprop": "nationality"})
-        if nationality_el is not None:
-            nationality = nationality_el.getText().replace("\n", "").strip()  # type: ignore
-        else:
-            nationality = None
+        nationality = None
+        nationality_el = soup.find("span", itemprop="nationality")
+        if nationality_el:
+            nationality = nationality_el.get_text(strip=True)
 
-        citizenship_els = soup.find_all(
-            "span", {"class": "info-table__content info-table__content--bold"}
-        )
-        flag_els = [
-            flag_el for el in citizenship_els
-            for flag_el in el.find_all("img", {"class": "flaggenrahmen"})
-        ]
-        citizenship = list(set([el["title"] for el in flag_els]))
-        
+        citizenship = []
+        citizenship_els = soup.find_all("span", class_="info-table__content info-table__content--bold")
+        for el in citizenship_els:
+            flag_els = el.find_all("img", class_="flaggenrahmen")
+            citizenship.extend(el["title"] for el in flag_els if el.get("title"))
+
         # Position
-        position_el = soup.find("dd", {"class": "detail-position__position"})
-        if position_el is None:
-            position_el = [
-                el for el in soup.find_all("li", {"class": "data-header__label"})
-                if "position" in el.text.lower()
-            ][0].find("span")
-        position = position_el.text.strip()
+        position = None
+        position_el = soup.find("dd", class_="detail-position__position")
+        if not position_el:
+            position_els = [el for el in soup.find_all("li", class_="data-header__label") if "position" in el.text.lower()]
+            position_el = position_els[0].find("span") if position_els else None
+        if position_el:
+            position = position_el.text.strip()
+
         try:
             other_positions = [
-                el.text for el in
-                soup.find("div", {"class": "detail-position__position"}).find_all("dd")  # type: ignore
-            ]
+                el.text for el in soup.find("div", class_="detail-position__position").find_all("dd")
+            ] if soup.find("div", class_="detail-position__position") else None
         except AttributeError:
             other_positions = None
-        other_positions = None if other_positions is None else pd.DataFrame(other_positions)  # type: ignore
 
-        # Data header fields
-        team = soup.find("span", {"class": "data-header__club"})
-        team = None if team is None else team.text.strip()  # type: ignore
+        # Team
+        team = None
+        team_tag = soup.find("span", class_="data-header__club")
+        if team_tag:
+            team = team_tag.text.strip()
 
-        data_headers_labels = soup.find_all("span", {"class": "data-header__label"})
-        # Last club
-        last_club = [
-            x.text.split(":")[-1].strip() for x in data_headers_labels
-            if "last club" in x.text.lower()
-        ]
-        assert len(last_club) < 2
-        last_club = None if len(last_club) == 0 else last_club[0]  # type: ignore
-        # "Since" date
-        since_date = [
-            x.text.split(":")[-1].strip() for x in data_headers_labels
-            if "since" in x.text.lower()
-        ]
-        assert len(since_date) < 2
-        since_date = None if len(since_date) == 0 else since_date[0]  # type: ignore
-        # "Joined" date
-        joined_date = [
-            x.text.split(":")[-1].strip() for x in data_headers_labels if "joined" in x.text.lower()
-        ]
-        assert len(joined_date) < 2
-        joined_date = None if len(joined_date) == 0 else joined_date[0]  # type: ignore
-        # Contract expiration date
-        contract_expiration = [
-            x.text.split(":")[-1].strip() for x in data_headers_labels
-            if "contract expires" in x.text.lower()
-        ]
-        assert len(contract_expiration) < 2
-        contract_expiration = None if len(contract_expiration) == 0 else contract_expiration[0]  # type: ignore
-        
+        # Extract additional data headers
+        data_headers_labels = soup.find_all("span", class_="data-header__label")
+
+        def extract_data_from_headers(keyword: str):
+            results = [x.text.split(":")[-1].strip() for x in data_headers_labels if keyword.lower() in x.text.lower()]
+            return results[0] if results else None
+
+        last_club = extract_data_from_headers("last club")
+        since_date = extract_data_from_headers("since")
+        joined_date = extract_data_from_headers("joined")
+        contract_expiration = extract_data_from_headers("contract expires")
+
         # Market value history
+        market_value_history = None
         try:
-            script = [
-                s for s in soup.find_all("script", {"type": "text/javascript"})
-                if "var chart = new Highcharts.Chart" in str(s)
-            ][0]
+            script = next(s for s in soup.find_all("script", type="text/javascript") if "var chart = new Highcharts.Chart" in str(s))
             values = [int(s.split(",")[0]) for s in str(script).split("y\":")[2:-2]]
-            dates = [
-                s.split("datum_mw\":")[-1].split(",\"x")[0].replace("\\x20", " ").replace("\"", "")
-                for s in str(script).split("y\":")[2:-2]
-            ]
+            dates = [s.split("datum_mw\":")[-1].split(",\"x")[0].replace("\\x20", " ").replace("\"", "") for s in str(script).split("y\":")[2:-2]]
             market_value_history = pd.DataFrame({"date": dates, "value": values})
-        except IndexError:
+        except (StopIteration, IndexError, ValueError):
             market_value_history = None
-        
-        # Transfer History
-        rows = soup.find_all("div", {"class": "grid tm-player-transfer-history-grid"})
-        transfer_history = pd.DataFrame(
-            data=[[s.strip() for s in row.getText().split("\n\n") if s != ""] for row in rows],
-            columns=["Season", "Date", "Left", "Joined", "MV", "Fee", ""]
-        ).drop(
-            columns=[""]
-        )
-        
-        player = pd.Series(dtype=object)
-        player["Name"] = name
-        player["Shirt number"] = shirt_number
-        player["ID"] = player_link.split("/")[-1]
-        player["Value"] = value
-        player["Value last updated"] = value_last_updated
-        player["DOB"] = dob
-        player["Age"] = age
-        player["Height (m)"] = height
-        player["Nationality"] = nationality
-        player["Citizenship"] = citizenship
-        player["Position"] = position
-        player["Other positions"] = other_positions
-        player["Team"] = team
-        player["Last club"] = last_club
-        player["Since"] = since_date
-        player["Joined"] = joined_date
-        player["Contract expiration"] = contract_expiration
-        player["Market value history"] = market_value_history
-        player["Transfer history"] = transfer_history
 
-        return player.to_frame().T
+        # Transfer History
+        transfer_history = None
+        try:
+            rows = soup.find_all("div", class_="grid tm-player-transfer-history-grid")
+            transfer_history = pd.DataFrame(
+                [[s.strip() for s in row.get_text("\n").split("\n") if s] for row in rows],
+                columns=["Season", "Date", "Left", "Joined", "MV", "Fee"]
+            )
+        except Exception as e:
+            print(f"Error parsing transfer history: {e}")
+            transfer_history = None
+
+        # Create final player DataFrame
+        player_data = {
+            "Name": name,
+            "Shirt number": shirt_number,
+            "ID": player_link.split("/")[-1],
+            "Value": value,
+            "Value last updated": value_last_updated,
+            "DOB": dob,
+            "Age": age,
+            "Height (m)": height,
+            "Nationality": nationality,
+            "Citizenship": citizenship,
+            "Position": position,
+            "Other positions": None if not other_positions else pd.DataFrame(other_positions),
+            "Team": team,
+            "Last club": last_club,
+            "Since": since_date,
+            "Joined": joined_date,
+            "Contract expiration": contract_expiration,
+            "Market value history": market_value_history,
+            "Transfer history": transfer_history
+        }
+
+        return pd.DataFrame([player_data])
