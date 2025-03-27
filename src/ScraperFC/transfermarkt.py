@@ -44,7 +44,8 @@ comps = {
     "Peru Liga 1 Apertura": "https://www.transfermarkt.us/liga-1-apertura/startseite/wettbewerb/TDeA",
     "Paraguay Primera Divison Apertura": "https://www.transfermarkt.us/primera-division-apertura/startseite/wettbewerb/PR1A",
     "Bolivia Division Profesional Apertura": "https://www.transfermarkt.us/division-profesional-apertura/startseite/wettbewerb/B1AP",
-    "Venezuela Liga Apertura": "https://www.transfermarkt.us/liga-futve-apertura/startseite/wettbewerb/VZ1A"
+    "Venezuela Liga Apertura": "https://www.transfermarkt.us/liga-futve-apertura/startseite/wettbewerb/VZ1A",
+    "Copa Libertadores": "https://www.transfermarkt.us/copa-libertadores/teilnehmer/pokalwettbewerb/CLI/"
 }
 
 
@@ -113,7 +114,8 @@ class Transfermarkt():
                 )
                 club_links = list()
             else:
-                club_els = items_table_tag.find_all("td", {"class": "hauptlink no-border-links"})  # type: ignore
+                # club_els = items_table_tag.find_all("td", {"class": "hauptlink no-border-links"}) or 'links no-border-links hauptlink' # type: ignore
+                club_els = items_table_tag.find_all("td", class_=lambda c: c in ["hauptlink no-border-links", "links no-border-links hauptlink"])
                 club_links = [TRANSFERMARKT_ROOT + x.find("a")["href"] for x in club_els]
             return club_links
         finally:
