@@ -45,7 +45,8 @@ comps = {
     "Paraguay Primera Divison Apertura": "https://www.transfermarkt.us/primera-division-apertura/startseite/wettbewerb/PR1A",
     "Bolivia Division Profesional Apertura": "https://www.transfermarkt.us/division-profesional-apertura/startseite/wettbewerb/B1AP",
     "Venezuela Liga Apertura": "https://www.transfermarkt.us/liga-futve-apertura/startseite/wettbewerb/VZ1A",
-    "Copa Libertadores": "https://www.transfermarkt.us/copa-libertadores/teilnehmer/pokalwettbewerb/CLI/"
+    "Copa Libertadores": "https://www.transfermarkt.us/copa-libertadores/teilnehmer/pokalwettbewerb/CLI/",
+    "Copa Mundial de Clubes": "https://www.transfermarkt.com.ar/fifa-klub-wm/teilnehmer/pokalwettbewerb/KLUB"
 }
 
 
@@ -202,7 +203,9 @@ class Transfermarkt():
         player_links = self.get_player_links(year, league)
         df = pd.DataFrame()
         for player_link in tqdm(player_links, desc=f"{year} {league} players"):
+            print(player_link)
             player = self.scrape_player(player_link)
+            print(player.Name, player.Team, player.Age, player.Value)
             df = pd.concat([df, player], axis=0, ignore_index=True)
         
         return df
@@ -261,7 +264,7 @@ class Transfermarkt():
         if dob_el:
             dob_parts = dob_el.text.strip().split(" ")
             dob = " ".join(dob_parts[:3]) if len(dob_parts) >= 3 else None
-            age = int(dob_parts[-1].replace("(", "").replace(")", "")) if dob_parts[-1].isdigit() else None
+            age = int(dob_parts[-1].replace("(", "").replace(")", "")) # if dob_parts[-1].isdigit() else None
         else:
             dob, age = None, None
 
